@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apegramma · Tabellone</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ====== BARRA SUPERIORE (comandi del conduttore) ====== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-hex">⬢</span>
+      <span id="gameTitle">Apegramma</span>
+      <span class="manche-badge">Manche <strong id="mancheNum">1</strong></span>
+      <span class="type-badge" id="mancheType">🔨 asta</span>
+    </div>
+    <nav class="toolbar operator-only">
+      <button class="tb" data-action="newLetters" title="Nuove lettere casuali (N)">🎲 <span class="tb-label">Nuove lettere</span></button>
+      <button class="tb" data-action="nextPreset" title="Prossimo set di lettere preparato (P)">📋 <span class="tb-label">Set successivo</span></button>
+      <button class="tb" data-action="shuffle" title="Mescola le lettere esterne (M)">🔀 <span class="tb-label">Mescola</span></button>
+      <button class="tb" data-action="toggleClosed" title="Manche al chiuso: ogni tavolo scrive la parola su un foglio (K)">🔒 <span class="tb-label">Al chiuso</span></button>
+      <button class="tb" data-action="toggleHide" title="Nascondi / rivela le lettere (R)">🙈 <span class="tb-label">Nascondi</span></button>
+      <span class="tb-sep"></span>
+      <button class="tb" data-action="undo" title="Annulla l'ultima azione (Ctrl+Z)">↩️ <span class="tb-label">Annulla</span></button>
+      <button class="tb" data-action="history" title="Storico delle manche">🗂️ <span class="tb-label">Storico</span></button>
+      <button class="tb" data-action="ranking" title="Classifica (C)">🏆 <span class="tb-label">Classifica</span></button>
+      <button class="tb" data-action="settings" title="Impostazioni">⚙️ <span class="tb-label">Impostazioni</span></button>
+      <span class="tb-sep"></span>
+      <button class="tb" data-action="presentation" title="Nasconde i comandi per la proiezione (H)">🎬 <span class="tb-label">Presentazione</span></button>
+      <button class="tb" data-action="fullscreen" title="Schermo intero (F)">⛶</button>
+    </nav>
+    <button class="tb show-controls" data-action="presentation" title="Mostra i comandi (H)">⚙️</button>
+  </header>
+
+  <!-- ====== TABELLONE ====== -->
+  <main class="board" id="board">
+    <section class="teams-strip strip-top" id="stripTop"></section>
+    <section class="teams-strip strip-left" id="stripLeft"></section>
+
+    <section class="center">
+      <div class="timer-row">
+        <div class="timer" id="timer" title="Clic: avvia/pausa · Doppio clic: azzera (Spazio)">
+          <span class="timer-icon">⏱</span><span id="timerText">1:00</span>
+        </div>
+        <div class="timer-controls operator-only">
+          <button class="mini" data-action="timerToggle" title="Avvia / pausa (Spazio)">▶︎ / ❚❚</button>
+          <button class="mini" data-action="timerReset" title="Azzera">⟲</button>
+        </div>
+        <div class="bid-banner" id="bidBanner"></div>
+        <button class="btn-end operator-only" data-action="endManche" title="Chiude la manche e somma i punti ai totali">🏁 Fine manche</button>
+      </div>
+
+      <div class="hive-wrap">
+        <div class="hive" id="hive" aria-label="Lettere della manche"></div>
+      </div>
+
+      <div class="rules-hint" id="rulesHint"></div>
+
+      <form class="word-form" id="wordForm" autocomplete="off">
+        <select id="closedTeam" class="closed-only" title="Tavolo che ha consegnato il foglio"></select>
+        <input type="text" id="wordInput" placeholder="Scrivi la parola da controllare…" spellcheck="false" autocapitalize="off">
+        <button type="submit" class="btn-primary" id="wordSubmit">Verifica</button>
+      </form>
+
+      <div class="result" id="result" hidden></div>
+
+      <div class="used-wrap">
+        <div class="used-head">
+          <span>Parole già usate <span class="count" id="usedCount">0</span></span>
+          <input type="search" id="usedFilter" class="used-filter operator-only" placeholder="cerca…">
+        </div>
+        <div class="used-list" id="usedList"></div>
+      </div>
+
+    </section>
+
+    <section class="teams-strip strip-right" id="stripRight"></section>
+    <section class="teams-strip strip-bottom" id="stripBottom"></section>
+  </main>
+
+  <!-- ====== FINESTRE ====== -->
+  <dialog id="dlgSettings" class="dlg dlg-wide">
+    <form method="dialog" class="dlg-body" id="settingsForm">
+      <h2>⚙️ Impostazioni</h2>
+
+      <div class="settings-grid">
+        <fieldset>
+          <legend>Partita</legend>
+          <label>Titolo <input type="text" name="title"></label>
+          <label>Numero di tavoli <input type="number" name="numTables" min="2" max="20"></label>
+          <label>Obiettivo punti (0 = nessuno) <input type="number" name="targetScore" min="0"></label>
+          <label>Numero di manche (0 = libero) <input type="number" name="maxManches" min="0"></label>
+          <label>Dimensione testo
+            <input type="range" name="fontScale" min="0.7" max="1.6" step="0.05">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Regole parole</legend>
+          <label>Numero di lettere <input type="number" name="letterCount" min="5" max="10"></label>
+          <label>Lunghezza minima parola <input type="number" name="minLength" min="2" max="10"></label>
+          <label class="chk"><input type="checkbox" name="requireCentral"> Lettera centrale obbligatoria</label>
+          <label>Le parole già usate valgono per…
+            <select name="usedScope">
+              <option value="game">tutta la partita</option>
+              <option value="manche">solo la manche in corso</option>
+            </select>
+          </label>
+          <label class="chk"><input type="checkbox" name="autoNextSet"> A fine manche carica nuove lettere</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Punteggio</legend>
+          <label>Punti alla parola vincente
+            <select name="scoring">
+              <option value="length">uno per ogni lettera</option>
+              <option value="fixed">punteggio fisso</option>
+            </select>
+          </label>
+          <label>Punti fissi (se scelto) <input type="number" name="fixedPoints" min="0"></label>
+          <label>Apegramma (usa tutte le lettere)
+            <select name="pangramMode">
+              <option value="double">vale il doppio</option>
+              <option value="bonus">bonus fisso</option>
+              <option value="none">nessun extra</option>
+            </select>
+          </label>
+          <label>Bonus fisso apegramma <input type="number" name="pangramBonus" min="0"></label>
+          <label>Penalità parola non valida <input type="number" name="penalty" min="0"></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Asta e timer</legend>
+          <label class="chk"><input type="checkbox" name="showBids"> Mostra le offerte nei box dei tavoli</label>
+          <label class="chk"><input type="checkbox" name="enforceBid"> La parola deve essere lunga almeno quanto l'offerta</label>
+          <label>Durata timer (secondi) <input type="number" name="timerSeconds" min="5" max="900"></label>
+          <label class="chk"><input type="checkbox" name="timerSound"> Suono negli ultimi 5 secondi</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Manche al chiuso</legend>
+          <label>Probabilità che una manche sia al chiuso (%)
+            <input type="number" name="closedChance" min="0" max="100" step="5">
+          </label>
+          <label>In caso di apegramma
+            <select name="closedPangramPriority">
+              <option value="tie">decide solo i pareggi</option>
+              <option value="always">vince sempre, anche contro parole più lunghe</option>
+            </select>
+          </label>
+          <p class="help">A pari lunghezza vincono tutti i tavoli a pari merito, salvo che uno abbia un apegramma. Con 0% le manche al chiuso si attivano solo a mano (🔒 / tasto K).</p>
+        </fieldset>
+      </div>
+
+      <fieldset>
+        <legend>Nomi dei tavoli</legend>
+        <div class="team-names" id="teamNames"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Set di lettere preparati</legend>
+        <p class="help">Uno per riga: le lettere e poi, dopo i due punti, la lettera centrale. Es. <code>nodsita:n</code>. Senza i due punti la centrale è la prima lettera. Usa «📋 Set successivo» per caricarli in ordine.</p>
+        <textarea name="presets" rows="4" spellcheck="false"></textarea>
+        <label class="inline">Lettere della manche in corso
+          <input type="text" name="currentLetters" spellcheck="false" placeholder="es. rmeabis:a">
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Dati</legend>
+        <div class="row-btns">
+          <button type="button" data-action="exportJson">💾 Salva partita (.json)</button>
+          <button type="button" data-action="importJson">📂 Carica partita</button>
+          <button type="button" data-action="exportCsv">📊 Esporta risultati (.csv)</button>
+          <button type="button" class="danger" data-action="resetScores">Azzera punteggi</button>
+          <button type="button" class="danger" data-action="newGame">Nuova partita</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </fieldset>
+
+      <div class="dlg-actions">
+        <button value="cancel" type="button" data-close>Annulla</button>
+        <button value="ok" class="btn-primary" id="saveSettings">Salva</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgRanking" class="dlg">
+    <div class="dlg-body">
+      <h2 id="rankingTitle">🏆 Classifica</h2>
+      <ol class="ranking" id="rankingList"></ol>
+      <div class="dlg-actions"><button data-close class="btn-primary">Chiudi</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="dlgHistory" class="dlg dlg-wide">
+    <div class="dlg-body">
+      <h2>🗂️ Storico manche</h2>
+      <div id="historyList" class="history"></div>
+      <div class="dlg-actions"><button data-close class="btn-primary">Chiudi</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="dlgConfirm" class="dlg">
+    <form method="dialog" class="dlg-body">
+      <h2 id="confirmTitle">Conferma</h2>
+      <p id="confirmText"></p>
+      <div class="dlg-actions">
+        <button value="no">Annulla</button>
+        <button value="yes" class="btn-primary" id="confirmYes">Conferma</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgEditTeam" class="dlg">
+    <form method="dialog" class="dlg-body" id="editTeamForm">
+      <h2>✏️ Modifica tavolo</h2>
+      <label>Nome <input type="text" name="name" required></label>
+      <label>Colore <input type="color" name="color"></label>
+      <label>Totale <input type="number" name="total"></label>
+      <label>Punti manche <input type="number" name="manche"></label>
+      <label>Offerta asta <input type="number" name="bid" min="0"></label>
+      <div class="dlg-actions">
+        <button value="cancel">Annulla</button>
+        <button value="ok" class="btn-primary">Salva</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="announce" id="announce" hidden></div>
+  <div class="toast" id="toast"></div>
+  <div class="celebrate" id="celebrate"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
